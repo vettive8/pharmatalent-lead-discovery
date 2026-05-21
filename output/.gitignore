@@ -1,0 +1,7 @@
+# Commit the deliverable artifacts the case study asks for, ignore everything
+# else that lands in output/ (logs, scratch files, per-run dumps).
+*
+!.gitignore
+!run_summary.json
+!active_client_hiring.csv
+!icp_fit_decisions.csv

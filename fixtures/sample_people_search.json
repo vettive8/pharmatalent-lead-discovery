@@ -1,0 +1,67 @@
+{
+  "request": {
+    "tool": "people_search",
+    "company_name": "Idorsia Pharmaceuticals",
+    "company_domain": "idorsia.com",
+    "target_titles": [
+      "Head of Talent",
+      "VP People",
+      "Director Regulatory Affairs",
+      "Director Clinical Operations"
+    ],
+    "location": "Allschwil, Switzerland",
+    "cascade_level": "city"
+  },
+  "results": [
+    {
+      "full_name": "Sandra Müller",
+      "first_name": "Sandra",
+      "last_name": "Müller",
+      "title": "Head of Talent Acquisition EU",
+      "company": "Idorsia Pharmaceuticals",
+      "company_domain": "idorsia.com",
+      "location": "Basel, Switzerland",
+      "linkedin_url": "https://www.linkedin.com/in/sandra-mueller-talent/",
+      "email": null,
+      "email_status": "not_found",
+      "about_snippet": "Talent leader for late-stage biotech. Building global teams across regulatory, clinical, and CMC for a Swiss-headquartered specialty pharma.",
+      "source": "ai_ark",
+      "confidence": 0.92
+    },
+    {
+      "full_name": "Markus Frei",
+      "first_name": "Markus",
+      "last_name": "Frei",
+      "title": "Director Regulatory Affairs",
+      "company": "Idorsia Pharmaceuticals",
+      "company_domain": "idorsia.com",
+      "location": "Allschwil, Switzerland",
+      "linkedin_url": "https://www.linkedin.com/in/markus-frei-ra/",
+      "email": "markus.frei@idorsia.com",
+      "email_status": "unverified",
+      "about_snippet": "20+ years in global regulatory strategy. Leading EMA and FDA submissions for late-stage CNS and CV programs.",
+      "source": "ai_ark",
+      "confidence": 0.88
+    },
+    {
+      "full_name": "Elena Rossi",
+      "first_name": "Elena",
+      "last_name": "Rossi",
+      "title": "Senior Clinical Research Associate",
+      "company": "Idorsia Pharmaceuticals",
+      "company_domain": "idorsia.com",
+      "location": "Allschwil, Switzerland",
+      "linkedin_url": "https://www.linkedin.com/in/elena-rossi-cra/",
+      "email": null,
+      "email_status": "not_found",
+      "about_snippet": "Clinical research associate supporting Phase 2 trials in sleep medicine.",
+      "source": "ai_ark",
+      "confidence": 0.71
+    }
+  ],
+  "meta": {
+    "elapsed_ms": 1842,
+    "providers_called": ["ai_ark"],
+    "cost_units": 1
+  }
+}

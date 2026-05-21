@@ -1,0 +1,10 @@
+# HTTP client for Apify, AI Ark, Prospeo, and OpenRouter REST calls.
+httpx>=0.27,<1.0
+# Postgres driver for Supabase — DDL (schema-from-code) + idempotent upserts.
+psycopg[binary]>=3.2,<4.0
+# Load credentials from .env.
+python-dotenv>=1.0,<2.0
+# Sane, bounded retries with backoff for flaky provider calls / 429s.
+tenacity>=8.2,<10.0
+# Fast fuzzy matching for active-client name normalization/matching.
+rapidfuzz>=3.6,<4.0

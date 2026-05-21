@@ -1,0 +1,24 @@
+[project]
+name = "pharmatalent-lead-pipeline"
+version = "0.1.0"
+description = "Weekly biotech/pharma lead-discovery pipeline for PharmaTalent Europe"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "httpx>=0.27,<1.0",
+    "psycopg[binary]>=3.2,<4.0",
+    "python-dotenv>=1.0,<2.0",
+    "tenacity>=8.2,<10.0",
+    "rapidfuzz>=3.6,<4.0",
+]
+
+[project.scripts]
+pharmatalent-pipeline = "pipeline.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["pipeline*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

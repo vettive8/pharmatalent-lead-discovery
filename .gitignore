@@ -1,0 +1,31 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Pipeline run artifacts that are environment-specific.
+# The committed deliverables (run_summary.json, active_client_hiring.csv,
+# icp_fit_decisions.csv) are force-added in output/ — see output/.gitignore.
+output/*.log
