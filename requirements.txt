@@ -1,4 +1,4 @@
-# HTTP client for Apify, AI Ark, Prospeo, and OpenRouter REST calls.
+# HTTP client for Apify, Prospeo, and OpenRouter REST calls.
 httpx>=0.27,<1.0
 # Postgres driver for Supabase — DDL (schema-from-code) + idempotent upserts.
 psycopg[binary]>=3.2,<4.0

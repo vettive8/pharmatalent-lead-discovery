@@ -87,8 +87,8 @@ CREATE TABLE IF NOT EXISTS contacts (
     linkedin_url          TEXT,
     location              TEXT,
     about_snippet         TEXT,
-    provider              TEXT CHECK (provider IN ('ai_ark', 'prospeo')),
-    cascade_level         TEXT CHECK (cascade_level IN ('city', 'country', 'region', 'worldwide', 'company')),
+    provider              TEXT CHECK (provider IN ('prospeo')),
+    cascade_level         TEXT CHECK (cascade_level IN ('company')),  -- Prospeo is company-scoped
     target_title          TEXT,                     -- DMM target title that surfaced them
     validation_decision   TEXT CHECK (validation_decision IN ('yes', 'no')),
     validation_reason     TEXT,
@@ -113,14 +113,14 @@ CREATE TABLE IF NOT EXISTS contact_jobs (
 -- ---------------------------------------------------------------------------
 -- dmm_queries — credit guard + audit for the people-search step. One row per
 -- (company, target_title) pair ever queried, UNIQUE so a rerun NEVER re-spends
--- AI Ark / Prospeo credits on a pair we already resolved.
+-- Prospeo credits on a pair we already resolved.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS dmm_queries (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id    UUID NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
     target_title  TEXT NOT NULL,
     cascade_level TEXT,                             -- level that hit, or last tried
-    provider      TEXT,                             -- ai_ark | prospeo | none
+    provider      TEXT,                             -- prospeo | none
     result_count  INTEGER NOT NULL DEFAULT 0,       -- people returned (= credits spent)
     outcome       TEXT NOT NULL CHECK (outcome IN ('hit', 'no_candidate')),
     queried_at    TIMESTAMPTZ NOT NULL DEFAULT now(),

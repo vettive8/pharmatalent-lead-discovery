@@ -40,7 +40,7 @@ jobs ──(organization_slug)──▶ companies(decision) ──< dmm_queries 
 - **`contact_jobs`** is the N:M join. The same person can be the decision-maker
   for several jobs at one company; we keep one contact and link each surfacing
   job here, rather than duplicating the person per job.
-- **`dmm_queries`** is a support table that is the AI Ark **credit guard**: one
+- **`dmm_queries`** is a support table that is the people-search **credit guard**: one
   row per `(company, primary target title)` ever queried, `UNIQUE` on that pair.
   Before any people-search call the pipeline checks this table; an already-
   resolved company is skipped, so a rerun never re-spends a people-search credit.

@@ -1,14 +1,13 @@
 """Stage 6: decision-maker mapping (DMM).
 
-For each ICP-fit company: pick the size-band target titles (DMM.md), then run a
-geographic cascade (city -> country -> EU region -> worldwide) of capped
-people-search calls, stopping at the first level that returns anyone.
+For each ICP-fit company we pick the size-band target titles (DMM.md) and run one
+capped Prospeo people-search. Prospeo matches by company name (it does not take a
+location parameter), so the DMM.md geographic cascade (city→country→region→
+worldwide) does not apply to it — we search the company once and record the scope
+as ``company``. See docs/adr-002.
 
 Budget protections (the operational-thinking axis):
 * Max 2 results per call (enforced in the client too).
-* One call per cascade level, passing the whole band title list, stopping on the
-  first hit — fewer credits than one call per title. (Documented reinterpretation
-  of "stop on first hit per (company, title)" — see README/ADR.)
 * The (company, primary-title) pair is recorded in dmm_queries; a rerun checks
   that guard first and never re-spends a credit on a company already resolved.
 """
@@ -25,6 +24,9 @@ from ..logging_setup import get_logger
 from ..models import Company, PersonCandidate
 
 log = get_logger("dmm")
+
+# Prospeo is company-scoped, so the recorded cascade level is always "company".
+CASCADE_LEVEL = "company"
 
 
 @dataclass
@@ -44,37 +46,9 @@ class DMMResult:
     credits_spent: int = 0
 
 
-def _cascade_levels(company: Company, band_label: str, geo_cascade: bool) -> list[tuple[str, str]]:
-    """(cascade_level, location) pairs in priority order for this company.
-
-    AI Ark takes a location, so it walks a true geographic cascade. Prospeo matches
-    by company name and ignores location, so a Prospeo-only run does a single
-    company-scoped search instead of re-querying the same company per geo level.
-    """
-    country = company.countries[0] if company.countries else None
-    if not geo_cascade:
-        return [("company", country or "worldwide")]
-
-    city = company.cities[0] if company.cities else None
-    levels: list[tuple[str, str]] = []
-    if city:
-        levels.append(("city", f"{city}, {country}" if country else city))
-    if country:
-        levels.append(("country", country))
-    region = icp.eu_region_for(country)
-    if region:
-        levels.append(("region", region))
-    # Worldwide only for the smallest band, where a single global owner is plausible.
-    if band_label == "50-200":
-        levels.append(("worldwide", "worldwide"))
-    return levels
-
-
 def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> DMMResult:
     client = PeopleSearchClient(settings)
     result = DMMResult()
-    # AI Ark uses a geographic cascade; a Prospeo-only run searches by company.
-    geo_cascade = bool(settings.ai_ark_token)
 
     for company in fit_companies:
         band = icp.size_band_for(company.employees)
@@ -93,35 +67,24 @@ def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> D
                      "company": company.name, "prior_outcome": seen["outcome"]})
             continue
 
-        hit = _search_cascade(client, company, titles, band_label, geo_cascade)
-        if hit is None:
+        candidates, provider = client.search(
+            company_name=company.name, company_domain=company.domain, titles=titles, limit=2,
+        )
+        if not candidates or not provider:
             store.record_dmm_query(company.id, primary_title, None, None, 0, "no_candidate")
             result.no_candidate.append(company.name)
             log.info("dmm no candidate", extra={"event": "dmm.no_candidate", "company": company.name})
             continue
 
-        candidates, cascade_level, provider = hit
-        store.record_dmm_query(company.id, primary_title, cascade_level, provider,
+        store.record_dmm_query(company.id, primary_title, CASCADE_LEVEL, provider,
                                len(candidates), "hit")
         result.credits_spent += len(candidates)
-        result.hits.append(CompanyCandidates(company, candidates, cascade_level, provider, primary_title))
+        result.hits.append(CompanyCandidates(company, candidates, CASCADE_LEVEL, provider, primary_title))
         log.info("dmm hit", extra={"event": "dmm.hit", "company": company.name,
-                 "cascade": cascade_level, "provider": provider, "candidates": len(candidates)})
+                 "provider": provider, "candidates": len(candidates)})
 
     log.info("dmm complete", extra={"event": "dmm.done", "hits": len(result.hits),
              "no_candidate": len(result.no_candidate),
              "skipped": len(result.skipped_already_queried),
              "credits_spent": result.credits_spent})
     return result
-
-
-def _search_cascade(client: PeopleSearchClient, company: Company, titles: list[str],
-                    band_label: str, geo_cascade: bool) -> tuple[list[PersonCandidate], str, str] | None:
-    for cascade_level, location in _cascade_levels(company, band_label, geo_cascade):
-        candidates, provider = client.search(
-            company_name=company.name, company_domain=company.domain, titles=titles,
-            location=location, cascade_level=cascade_level, limit=2,
-        )
-        if candidates and provider:
-            return candidates, cascade_level, provider
-    return None

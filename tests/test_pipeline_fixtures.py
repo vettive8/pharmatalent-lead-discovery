@@ -15,9 +15,8 @@ def _settings(output_dir):
     # local .env. Write artifacts to a temp dir so the test never clobbers the
     # committed output/ deliverables. Never touches the network or spends credits.
     s = load_settings(use_fixtures=True, no_db=True)
-    return dataclasses.replace(s, openrouter_api_key=None, ai_ark_token=None,
-                               prospeo_api_key=None, supabase_db_url=None,
-                               output_dir=output_dir)
+    return dataclasses.replace(s, openrouter_api_key=None, prospeo_api_key=None,
+                               supabase_db_url=None, output_dir=output_dir)
 
 
 def test_end_to_end_counts(tmp_path):

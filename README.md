@@ -9,8 +9,8 @@ Supabase — `jobs`, `companies`, `contacts` — ready for downstream outreach.
 > _Take-home for the delivery-engineer interview. Self-reported time: **~7 focused
 > hours**, AI-assisted with Claude Code (see [AI-assisted workflow](#ai-assisted-workflow))._
 >
-> _People-search uses **Prospeo** (AI Ark requires a business-email account, which I
-> didn't have for this project). It was run end-to-end on free-tier accounts; the
+> _People-search uses **Prospeo** (see [People-search provider](#people-search-provider)
+> for why, not the brief's default AI Ark). Run end-to-end on free-tier accounts; the
 > only paid item was a **$5 OpenRouter top-up** (sanctioned by `TOOLS.md`), of which
 > the live runs used ~$0.23._
 
@@ -66,7 +66,7 @@ pipeline/
     http.py          shared bounded-retry policy (429/5xx backoff)
     apify.py         fantastic.jobs actor (+ fixture fallback)
     openrouter.py    web fit-check + cheap validation (prompts + JSON parsing)
-    people_search.py Prospeo people-search (+ optional AI Ark, fixture synth)
+    people_search.py Prospeo people-search (+ fixture synth)
     store.py         data layer: PostgresStore + InMemoryStore dry-run double
   stages/            scrape, exclude, fitcheck, dmm, validate
   outputs.py         the two CSVs + run_summary.json
@@ -112,17 +112,15 @@ Copy `.env.example` → `.env` and fill in:
 |---|---|---|
 | `APIFY_TOKEN` | yes | Apify LinkedIn jobs scraper |
 | `OPENROUTER_API_KEY` | yes | ICP fit-check + hiring-manager validation |
-| `PROSPEO_API_KEY` | yes* | People-search (DMM) — the configured & verified provider |
-| `AI_ARK_TOKEN` | optional* | Alternative people-search; set it to make AI Ark primary (Prospeo fallback) |
+| `PROSPEO_API_KEY` | yes | People-search (DMM step) — the provider this pipeline uses |
 | `SUPABASE_DB_URL` | yes | Postgres connection string — schema is created from it |
 | `OPENROUTER_FITCHECK_MODEL` | optional | Default `perplexity/sonar` |
 | `OPENROUTER_VALIDATION_MODEL` | optional | Default `deepseek/deepseek-chat` |
 | `SCRAPE_LOCATIONS` / `SCRAPE_TIME_RANGE` / `SCRAPE_MAX_ITEMS` | optional | Scrape tuning |
 
-\* Provide `PROSPEO_API_KEY` **or** `AI_ARK_TOKEN` (or both). **This repo is
-configured and verified end-to-end with Prospeo.** If `AI_ARK_TOKEN` is also set,
-AI Ark is tried first and Prospeo is the fallback. Everything else required is
-checked at startup with a clear error if missing.
+All required values are checked at startup, with a clear error naming anything
+missing. (Why Prospeo and not the brief's default AI Ark? See
+[People-search provider](#people-search-provider).)
 
 **Supabase note (important for reviewers).** We connect with `psycopg` over the
 direct Postgres connection string so the schema can be created from code on a
@@ -167,18 +165,22 @@ the web model, keep validation cheap.
 ## People-search provider
 
 This pipeline uses **Prospeo** for the decision-maker mapping step (`POST
-/search-person`, `X-KEY` auth). AI Ark is the brief's default, but it requires a
-business-email account I didn't have for this project, so **Prospeo is what runs
-here** and what the verification used.
+/search-person`, `X-KEY` auth), verified end-to-end against the live API.
 
-AI Ark support is still included as an **optional drop-in**: set `AI_ARK_TOKEN` and
-it becomes the primary provider (built to AI Ark's documented `/v1/people` API)
-with Prospeo as the fallback. It is wired but not exercised in this submission. The
-P2 `mcp.json` is provided so a reviewer can connect their own AI Ark account to
-Claude Code / Cursor for ad-hoc exploration. Because Prospeo matches by company
-name (it is location-agnostic), a Prospeo run does one company-scoped search per
-company rather than AI Ark's geographic city→country→region→worldwide cascade —
-see [docs/adr-002-people-search-budget.md](docs/adr-002-people-search-budget.md).
+**Why not AI Ark (the brief's default)?** AI Ark requires a *business-email*
+account, which I didn't have for this take-home — so I could not test it live.
+Rather than ship a provider I never exercised (untested code is a liability, not a
+feature), I went all-in on Prospeo, which the brief accepts as an equal
+alternative (TOOLS.md §2b). This is the one trade-off it costs: the P2 AI Ark
+`mcp.json` bonus is not included. Everything is env-driven, so swapping providers
+later is a config + small client change, not a rewrite.
+
+**One consequence for the cascade:** Prospeo matches by company **name** and takes
+no location parameter, so the DMM.md geographic cascade
+(city→country→region→worldwide) — which is meaningful for a *location*-parameterised
+API — does not apply. We do one company-scoped search and rank the returned people
+by decision-maker seniority. The recorded `cascade_level` is therefore `company`.
+See [docs/adr-002-people-search-budget.md](docs/adr-002-people-search-budget.md).
 
 ## Operational behavior
 
@@ -187,8 +189,8 @@ see [docs/adr-002-people-search-budget.md](docs/adr-002-people-search-budget.md)
   people-search credits — already-resolved `(company, title)` pairs are skipped
   via `dmm_queries`. See [docs/adr-002-people-search-budget.md](docs/adr-002-people-search-budget.md).
 - **Budget discipline.** People-search is capped at 2 results/call and never
-  re-queries a resolved company — a discipline designed for the tightest free tier
-  (AI Ark's 100-credit ceiling) and applied to Prospeo too.
+  re-queries a resolved `(company, title)` — designed to respect tight people-search
+  free tiers (Prospeo's credits, and the brief's even-tighter default budget).
 - **Resilience.** Provider calls use bounded exponential backoff on 429/5xx
   (never infinite). A failed fit-check or validation call degrades to the offline
   heuristic for that one item instead of aborting the run. Config errors fail fast
@@ -225,36 +227,32 @@ This pipeline was run end-to-end against real free-tier accounts and populated a
 blank Supabase project. Integration details verified against the live APIs:
 
 1. **Apify** — confirmed against the actor's live Input schema: recency param is
-   `timeRange` (enum `1h/24h/7d/6m`), result cap is `limit` (max 5000). Verified.
+   `timeRange` (enum `1h/24h/7d/6m`), result cap is `limit` (max 5000).
 2. **Prospeo** — `POST https://api.prospeo.io/search-person` (`X-KEY` auth) with a
    `filters.company.names.include` query; returns 25/page (capped to 2 client-side),
    ranked by seniority. `NO_RESULTS` and rate-limits arrive as HTTP 400 and are
    handled (no-candidate / retry). Verified with live calls.
-3. **AI Ark** (optional) — built to the documented API
-   (`POST /api/developer-portal/v1/people`, `X-TOKEN` auth, `account`/`contact`
-   filter objects, `content[]` response). Wired but not live-tested (this repo runs
-   on Prospeo); all account-scoped values are env-overridable.
-4. **OpenRouter** — the web model (`perplexity/sonar`) rejects
+3. **OpenRouter** — the web model (`perplexity/sonar`) rejects
    `response_format=json_object`, so the fit-check requests plain text and parses
-   the JSON out; validation (`deepseek/deepseek-chat`) uses JSON mode. Verified.
-5. **AI Ark MCP URL** in `mcp.json` (P2 bonus) — confirm the transport/URL from AI
-   Ark's MCP docs before connecting (not exercised by the pipeline).
+   the JSON out; validation (`deepseek/deepseek-chat`) uses JSON mode.
+4. **Supabase** — schema bootstrapped from code on a blank project; jobs / companies
+   / contacts populated over the direct Postgres (psycopg) connection.
 
 ## Scope — what's done
 
 - **P0 (all done):** Apify scrape with ICP keywords + locations + 7-day window →
   `jobs`; active-client exclusion *before* fit-check; web-research ICP fit-check →
-  `companies` + rationale; Prospeo `people_search` (AI Ark optional/primary when its
-  token is set) capped at 2, logging cascade level + provider; mandatory LLM
-  hiring-manager validation with a logged reason for every drop; validated contacts
-  → `contacts` linked to company + job(s); schema created from code; README for a
-  fresh clone.
+  `companies` + rationale; Prospeo `people_search` capped at 2, logging the provider
+  + scope per contact; mandatory LLM hiring-manager validation with a logged reason
+  for every drop; validated contacts → `contacts` linked to company + job(s); schema
+  created from code; README for a fresh clone.
 - **P1 (all done):** idempotent reruns (no dup rows, no re-spent credits); contact
   dedup with the N:M job join; structured logs + `run_summary.json`; schema
   bootstraps a blank Supabase.
 - **P2 (selected):** `active_client_hiring.csv`; LLM-scored fit (`fit_score`) +
-  per-company rationale; bounded retries; `mcp.json` for the AI Ark MCP server;
-  ADRs in `docs/`.
+  per-company rationale; bounded retries / rate-limit-aware client; ADRs in `docs/`.
+  *(Not done: the AI Ark `mcp.json` bonus — we don't ship the untested AI Ark path;
+  see [People-search provider](#people-search-provider).)*
 
 ### Cut for time / what I'd do with another day
 
@@ -273,15 +271,19 @@ blank Supabase project. Integration details verified against the live APIs:
   Bayer/Roche), killing the "active client is hiring" signal. We therefore do **one
   ICP-shaped scrape and filter size *after***, so the same scrape feeds both the
   main pipeline and the side-output. (TOOLS.md design note.)
-- **DMM "stop on first hit per (company, title)".** We pass the band's full title
-  list in one capped call per cascade level instead of one call per title —
-  strictly fewer credits, same outcome. Detailed in ADR 002.
+- **DMM geographic cascade.** DMM.md describes a city→country→region→worldwide
+  cascade, which assumes a *location*-parameterised people-search. Prospeo matches
+  by company name and takes no location, so we do one company-scoped search and
+  rank by seniority instead — same goal (find one valid decision-maker), fewer
+  credits. We record the band's primary title as the `(company, title)` guard key.
+  Detailed in ADR 002.
 
 ## AI-assisted workflow
 
-Built with **Claude Code**. The core pipeline landed via a Claude Code pull
-request (see the repo's PR history) — per the brief's requirement that at least
-one merged PR be opened via Claude Code or Codex.
+Built with **Claude Code**. The work landed through a series of merged Claude Code
+pull requests (core pipeline → live API hardening → provider transparency → ICP
+size-rule fix) — visible in the repo's PR history, per the brief's requirement that
+at least one merged PR be opened via Claude Code or Codex.
 
 ## License
 

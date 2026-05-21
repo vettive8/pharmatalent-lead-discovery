@@ -4,61 +4,58 @@
 
 ## Context
 
-The decision-maker mapping (DMM) step is the tightest budget in the pipeline:
-**AI Ark's free tier is 100 credits = 100 returned people, total.** Run out and
-the account is dead for the rest of the case study. Prospeo.io is an accepted
-alternative with a far larger free trial (~2,500 people). We had to choose
-providers and a calling strategy that finds a valid hiring manager per company
-without exhausting credits, and that survives reruns.
+The decision-maker mapping (DMM) step is the tightest budget in the pipeline. The
+brief defaults to **AI Ark** (free tier = 100 credits = 100 people, total) and
+accepts **Prospeo.io** as an equal alternative (TOOLS.md §2b, far larger free
+trial). We had to choose a provider and a calling strategy that finds a valid
+hiring manager per company without exhausting credits, and that survives reruns.
 
 ## Decision
 
-**Provider: Prospeo (used here); AI Ark optional.** This submission runs on
-Prospeo — AI Ark requires a business-email account I didn't have. AI Ark remains
-wired as an optional drop-in: if `AI_ARK_TOKEN` is set it is tried first (built to
-AI Ark's documented `/v1/people` API) and Prospeo is the fallback. The provider
-that produced each hit is logged and stored on the contact (`provider`), so the
-routing is auditable. Either provider can run alone via env.
+**Provider: Prospeo only.** AI Ark requires a *business-email* account, which I
+didn't have for this take-home, so I could not test it against the live API.
+Shipping a provider I never exercised would be untested code — a liability the
+"would we accept this into our monorepo?" bar rightly penalises — so I went all-in
+on Prospeo (`POST /search-person`, `X-KEY` auth), verified end-to-end. The cost of
+this decision is one P2 bonus we forgo: the AI Ark `mcp.json`. Everything is
+env-driven and the people-search client is isolated, so adding AI Ark later is a
+small, contained change.
 
-**Cascade depends on the provider.** AI Ark takes a `location`, so it walks the
-DMM.md geographic cascade (city → country → EU region → worldwide), one capped call
-per level, stopping at the first hit. **Prospeo matches by company name and ignores
-location**, so a Prospeo run does a single company-scoped search instead of
-re-querying the same company per geo level (the recorded `cascade_level` is
-`company`). Both cap at **2 results** and pass the band's target titles.
+**Company-scoped search, not a geographic cascade.** DMM.md describes a
+city→country→region→worldwide cascade, which only makes sense for a
+*location*-parameterised API. Prospeo's `/search-person` matches by company **name**
+and takes no location filter, so we do **one** company-scoped search per company,
+parse the returned people, and **rank them by decision-maker seniority** before
+applying the cap. The recorded `cascade_level` is therefore `company`.
 
-> **Reinterpretation flagged:** DMM.md phrases stop-on-first-hit "per (company,
-> target title)". Passing the full band title list in a single call (rather than
-> one call per title) is strictly *fewer* credits and still returns the best-matching
-> decision-maker — the right call given the 100-credit ceiling. We record the guard
-> against `(company, primary band title)`. This is the kind of contradiction the
-> brief asks candidates to flag rather than silently follow.
+**Hard cap of 2 results.** Even though Prospeo returns 25 people per call (1 credit),
+we keep only the top 2 after ranking — because every kept person costs an LLM
+validation call too, so 2 is the right ceiling regardless of provider (TOOLS.md §2b).
 
 **Credit guard via `dmm_queries`.** Before searching, we check whether the
-`(company, primary title)` pair was already queried (see
-[ADR 001](adr-001-supabase-schema.md)). If so, the company is skipped entirely —
-no people-search call, no LLM validation. A rerun therefore spends **zero** new
-credits on already-resolved companies (verified by `test_pipeline_fixtures.py`).
-
-**"worldwide" cascade only for sub-200-employee companies**, where a single global
-talent owner is plausible; larger companies stop at the region level rather than
-chasing a worldwide match that wouldn't own a local requisition.
+`(company, primary band title)` pair was already queried (see
+[ADR 001](adr-001-supabase-schema.md)). If so, the company is skipped entirely — no
+people-search call, no LLM validation. A rerun therefore spends **zero** new credits
+on already-resolved companies (proven by `test_pipeline_fixtures.py` and observed
+live: a rerun reported `skipped_already_queried` with 0 credits spent).
 
 ## Alternatives considered
 
-- *One call per (company, title)* — literal reading of DMM.md. Up to 5× the calls
-  per company; unjustifiable against a 100-credit cap.
-- *AI Ark as the live provider* — the brief's default, but it needs a
-  business-email account I didn't have. We use Prospeo and keep AI Ark as an
-  optional drop-in plus the `mcp.json` bonus, so a reviewer with an AI Ark key
-  still gets the "primary/fallback" pattern.
-- *Higher result cap* — every returned person costs an LLM validation call too, so
-  2 is the right ceiling regardless of provider (per TOOLS.md §2b).
+- *AI Ark as the live provider* — the brief's default, but it needs a business-email
+  account I didn't have, so it could not be tested live. Rejected in favour of
+  shipping only what we verified.
+- *One call per (company, title)* — a literal reading of DMM.md's per-title cascade.
+  Several× the calls per company for no real gain; unjustifiable against a tight cap.
+- *Prospeo location cascade* — Prospeo *does* have a `person_location_search` filter,
+  but it requires suggestion-validated location strings and risks false-negative
+  drops, so company-scoped search is more reliable here.
+- *Higher result cap* — rejected; each extra person is an extra validation call.
 
 ## Consequences
 
-- Worst case ≈ (companies × cascade levels) calls × 2 results; in practice most
-  companies hit at the city level → ~1 call/company. The fixture run resolves 13
-  companies for 13 credits.
-- Validation cost is bounded the same way (≤2 candidates/company), and the
-  in-run decision cache plus the `dmm_queries` guard prevent re-validation.
+- ~1 people-search call per ICP-fit company (≈1 credit each) — comfortably within
+  Prospeo's free trial. The live full-ICP run resolved 10 fit companies for ~20 credits.
+- Ranking-then-cap means the 2 candidates we validate are the most senior matches,
+  improving the hit rate of the (mandatory) LLM validation step.
+- Validation cost is bounded the same way (≤2 candidates/company); the in-run
+  decision cache plus the `dmm_queries` guard prevent re-validation on reruns.
