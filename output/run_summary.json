@@ -1,0 +1,45 @@
+{
+  "version": "0.1.0",
+  "mode": "fixtures",
+  "started_at": "2026-05-21T13:08:58.932132+00:00",
+  "finished_at": "2026-05-21T13:08:58.937135+00:00",
+  "duration_seconds": 0.02,
+  "stages": {
+    "scrape": {
+      "jobs_scraped": 22
+    },
+    "exclude": {
+      "companies_to_evaluate": 14,
+      "active_client_job_rows": 7,
+      "dropped_agencies": 1
+    },
+    "fit_check": {
+      "fit": 13,
+      "not_fit": 1
+    },
+    "dmm": {
+      "hits": 13,
+      "no_candidate": 0,
+      "skipped_already_queried": 0,
+      "people_search_credits_spent": 13
+    },
+    "validate": {
+      "contacts_created": 13,
+      "contacts_existing": 0,
+      "dropped": 0,
+      "validations_run": 13,
+      "job_links": 13
+    }
+  },
+  "database_totals": {
+    "jobs": 22,
+    "companies_fit": 13,
+    "companies_not_fit": 1,
+    "contacts": 13,
+    "contact_job_links": 13
+  },
+  "artifacts": {
+    "active_client_hiring_csv": "output/active_client_hiring.csv",
+    "icp_fit_decisions_csv": "output/icp_fit_decisions.csv"
+  }
+}

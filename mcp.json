@@ -1,0 +1,12 @@
+{
+  "$comment": "P2 bonus: wires AI Ark's MCP server as an EXTRA exploration channel alongside the API-driven pipeline. The pipeline itself always calls AI Ark over HTTP (see pipeline/clients/people_search.py); this is only so a reviewer can drop their own AI_ARK_TOKEN into the environment and connect the same account to Claude Code / Cursor for ad-hoc people_search exploration. Confirm the transport/url against AI Ark's MCP docs for your account; the token is read from the AI_ARK_TOKEN env var so no secret lives in the repo.",
+  "mcpServers": {
+    "ai-ark": {
+      "type": "http",
+      "url": "https://mcp.aiark.com",
+      "headers": {
+        "Authorization": "Bearer ${AI_ARK_TOKEN}"
+      }
+    }
+  }
+}
