@@ -34,6 +34,7 @@ log = get_logger("fitcheck")
 class FitCheckResult:
     fit_companies: list[Company] = field(default_factory=list)
     decision_rows: list[dict] = field(default_factory=list)   # audit CSV rows (fit + not_fit)
+    cached: int = 0                                           # reused a stored decision (no LLM call)
 
 
 def run_fitcheck(companies: list[Company], settings: Settings, store: Store) -> FitCheckResult:
@@ -41,6 +42,20 @@ def run_fitcheck(companies: list[Company], settings: Settings, store: Store) -> 
     result = FitCheckResult()
 
     for company in companies:
+        # Fit-check cache: reuse a stored decision so reruns don't re-spend the web
+        # model on a company we've already evaluated (the OpenRouter analogue of the
+        # dmm_queries credit guard).
+        cached = store.company_decision(company.linkedin_slug)
+        if cached is not None:
+            _apply_cached(company, cached)
+            result.cached += 1
+            result.decision_rows.append(_decision_row(company))
+            if company.decision == "fit":
+                result.fit_companies.append(company)
+            log.info("fit-check cache hit", extra={"event": "fitcheck.cached",
+                     "company": company.name, "decision": company.decision})
+            continue
+
         band = icp.size_band_for(company.employees)
         if band is None:
             decision = FitDecision(
@@ -64,8 +79,22 @@ def run_fitcheck(companies: list[Company], settings: Settings, store: Store) -> 
 
     log.info("fit-check complete", extra={"event": "fitcheck.done",
              "fit": len(result.fit_companies),
-             "not_fit": len(result.decision_rows) - len(result.fit_companies)})
+             "not_fit": len(result.decision_rows) - len(result.fit_companies),
+             "cached": result.cached})
     return result
+
+
+def _apply_cached(company: Company, cached: dict) -> None:
+    """Hydrate a company from its stored fit-check decision (no LLM call)."""
+    company.id = cached["id"]
+    company.decision = cached["decision"]
+    company.rationale = cached["rationale"]
+    company.confidence = cached["confidence"]
+    company.fit_score = cached["fit_score"]
+    company.size_band = cached["size_band"]
+    if cached.get("domain"):
+        company.domain = cached["domain"]
+    company.checked_at = cached.get("checked_at")
 
 
 def _safe_llm_fit(client: OpenRouterClient, company: Company) -> FitDecision:
