@@ -1,5 +1,7 @@
 """End-to-end fixture run + idempotency, all in-memory (no DB, no credits)."""
 
+import dataclasses
+
 from pipeline.clients.store import InMemoryStore
 from pipeline.config import load_settings
 from pipeline.logging_setup import setup_logging
@@ -9,7 +11,11 @@ setup_logging("WARNING")
 
 
 def _settings():
-    return load_settings(use_fixtures=True, no_db=True)
+    # Force a fully hermetic run: offline LLM + no providers, regardless of any
+    # local .env. The test must never touch the network or spend credits.
+    s = load_settings(use_fixtures=True, no_db=True)
+    return dataclasses.replace(s, openrouter_api_key=None, ai_ark_token=None,
+                               prospeo_api_key=None, supabase_db_url=None)
 
 
 def test_end_to_end_counts():

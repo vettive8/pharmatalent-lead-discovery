@@ -109,8 +109,10 @@ class OpenRouterClient:
 
     # -- fit-check ----------------------------------------------------------
     def fit_check(self, company: Company) -> FitDecision:
+        # Web models (perplexity/sonar) reject response_format=json_object, so we
+        # don't request it here; the prompt demands strict JSON and we parse it out.
         user = _build_fitcheck_user(company)
-        raw = self._chat(self.settings.fitcheck_model, _FITCHECK_SYSTEM, user)
+        raw = self._chat(self.settings.fitcheck_model, _FITCHECK_SYSTEM, user, json_mode=False)
         return _parse_fit_decision(raw)
 
     # -- validation ---------------------------------------------------------

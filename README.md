@@ -107,15 +107,17 @@ Copy `.env.example` → `.env` and fill in:
 |---|---|---|
 | `APIFY_TOKEN` | yes | Apify LinkedIn jobs scraper |
 | `OPENROUTER_API_KEY` | yes | ICP fit-check + hiring-manager validation |
-| `AI_ARK_TOKEN` | yes* | Primary people-search (DMM) |
-| `PROSPEO_API_KEY` | optional | Fallback people-search (used when AI Ark is empty) |
+| `PROSPEO_API_KEY` | yes* | People-search (DMM) — the configured & verified provider |
+| `AI_ARK_TOKEN` | optional* | Alternative people-search; set it to make AI Ark primary (Prospeo fallback) |
 | `SUPABASE_DB_URL` | yes | Postgres connection string — schema is created from it |
 | `OPENROUTER_FITCHECK_MODEL` | optional | Default `perplexity/sonar` |
 | `OPENROUTER_VALIDATION_MODEL` | optional | Default `deepseek/deepseek-chat` |
 | `SCRAPE_LOCATIONS` / `SCRAPE_TIME_RANGE` / `SCRAPE_MAX_ITEMS` | optional | Scrape tuning |
 
-\* Provide `AI_ARK_TOKEN` **or** `PROSPEO_API_KEY` (or both). Everything else
-required is checked at startup with a clear error if missing.
+\* Provide `PROSPEO_API_KEY` **or** `AI_ARK_TOKEN` (or both). **This repo is
+configured and verified end-to-end with Prospeo.** If `AI_ARK_TOKEN` is also set,
+AI Ark is tried first and Prospeo is the fallback. Everything else required is
+checked at startup with a clear error if missing.
 
 **Supabase note (important for reviewers).** We connect with `psycopg` over the
 direct Postgres connection string so the schema can be created from code on a
@@ -180,8 +182,9 @@ the web model, keep validation cheap.
   upsell signal for the account manager (P2).
 - `icp_fit_decisions.csv` — full fit-check audit trail (every keep/drop + rationale).
 
-_The committed copies are from a `--fixtures` demo run (`mode: "fixtures"`); a live
-run overwrites them._
+_The committed copies are from a real live run (`mode: "live"`) against free-tier
+accounts — Apify scrape + `perplexity/sonar` web fit-check + Prospeo people-search
++ Supabase. A reviewer's run overwrites them._
 
 ## Testing
 
@@ -195,28 +198,36 @@ slug match and the short-name false-positive guard), the validation heuristic
 against the real people-search fixture, and a full fixture run asserting stage
 counts **and idempotency** (second pass = 0 credits, no duplicate rows).
 
-## Live-run verification (read before the first real run)
+## Live-run verification (done)
 
-The fixture path is fully exercised offline. Three live integration details are
-confirmed against the real APIs the first time credentials are supplied (each is
-env-overridable so a correction is configuration, not a code change):
+This pipeline was run end-to-end against real free-tier accounts and populated a
+blank Supabase project. Integration details verified against the live APIs:
 
-1. **Apify recency parameter** — the actor's time-range key (`TIME_RANGE_PARAM` in
-   `clients/apify.py`); confirm against the actor's live Input schema.
-2. **AI Ark / Prospeo request shape** — endpoint path and field names
-   (`AI_ARK_PEOPLE_SEARCH_PATH`, `PROSPEO_PEOPLE_SEARCH_URL`); confirm against each
-   provider's live API + docs.
-3. **AI Ark MCP URL** in `mcp.json` (P2 bonus) — confirm the transport/URL from AI
-   Ark's MCP docs.
+1. **Apify** — confirmed against the actor's live Input schema: recency param is
+   `timeRange` (enum `1h/24h/7d/6m`), result cap is `limit` (max 5000). Verified.
+2. **Prospeo** — `POST https://api.prospeo.io/search-person` (`X-KEY` auth) with a
+   `filters.company.names.include` query; returns 25/page (capped to 2 client-side),
+   ranked by seniority. `NO_RESULTS` and rate-limits arrive as HTTP 400 and are
+   handled (no-candidate / retry). Verified with live calls.
+3. **AI Ark** (optional) — built to the documented API
+   (`POST /api/developer-portal/v1/people`, `X-TOKEN` auth, `account`/`contact`
+   filter objects, `content[]` response). Wired but not live-tested (this repo runs
+   on Prospeo); all account-scoped values are env-overridable.
+4. **OpenRouter** — the web model (`perplexity/sonar`) rejects
+   `response_format=json_object`, so the fit-check requests plain text and parses
+   the JSON out; validation (`deepseek/deepseek-chat`) uses JSON mode. Verified.
+5. **AI Ark MCP URL** in `mcp.json` (P2 bonus) — confirm the transport/URL from AI
+   Ark's MCP docs before connecting (not exercised by the pipeline).
 
 ## Scope — what's done
 
 - **P0 (all done):** Apify scrape with ICP keywords + locations + 7-day window →
   `jobs`; active-client exclusion *before* fit-check; web-research ICP fit-check →
-  `companies` + rationale; AI Ark `people_search` (Prospeo fallback) capped at 2,
-  logging cascade level + provider; mandatory LLM hiring-manager validation with a
-  logged reason for every drop; validated contacts → `contacts` linked to company
-  + job(s); schema created from code; README for a fresh clone.
+  `companies` + rationale; Prospeo `people_search` (AI Ark optional/primary when its
+  token is set) capped at 2, logging cascade level + provider; mandatory LLM
+  hiring-manager validation with a logged reason for every drop; validated contacts
+  → `contacts` linked to company + job(s); schema created from code; README for a
+  fresh clone.
 - **P1 (all done):** idempotent reruns (no dup rows, no re-spent credits); contact
   dedup with the N:M job join; structured logs + `run_summary.json`; schema
   bootstraps a blank Supabase.

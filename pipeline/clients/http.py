@@ -18,8 +18,14 @@ from tenacity import (
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
 
+class RetryableProviderError(Exception):
+    """Raised by a client when a provider signals a transient condition through a
+    non-standard channel (e.g. Prospeo returns HTTP 400 with a 'rate limit'
+    error_code instead of 429). Treated as retryable by the shared policy."""
+
+
 def _is_retryable(exc: BaseException) -> bool:
-    if isinstance(exc, (httpx.TimeoutException, httpx.TransportError)):
+    if isinstance(exc, (httpx.TimeoutException, httpx.TransportError, RetryableProviderError)):
         return True
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in RETRYABLE_STATUS
