@@ -123,13 +123,16 @@ missing. (Why Prospeo and not the brief's default AI Ark? See
 [People-search provider](#people-search-provider).)
 
 **Supabase note (important for reviewers).** We connect with `psycopg` over the
-direct Postgres connection string so the schema can be created from code on a
-**blank** project (`CREATE TABLE IF NOT EXISTS` in `sql/schema.sql`, run at
-startup) — the PostgREST/anon REST API cannot run DDL. Get the URI from
-*Supabase Dashboard → Project Settings → Database → Connection string → URI*
-(use the direct/session connection, not the transaction pooler, so DDL works).
-This is the only Supabase variable you need; `SUPABASE_URL` / service-role key are
-not used by the default path.
+Postgres connection string so the schema can be created from code on a **blank**
+project (`CREATE TABLE IF NOT EXISTS` in `sql/schema.sql`, run at startup) — the
+PostgREST/anon REST API cannot run DDL. So `SUPABASE_DB_URL` is the only Supabase
+variable you need; `SUPABASE_URL` / service-role key are not used.
+
+> **Use the Session pooler string** (Supabase → *Connect* → *Session pooler*, host
+> like `aws-...pooler.supabase.com:5432`). It is **IPv4-compatible** and supports the
+> schema's DDL. Avoid the other two: the **Direct** connection is **IPv6-only** and
+> fails on IPv4-only networks, and the **Transaction pooler** (port 6543) can't run
+> DDL. **So: Session pooler.**
 
 ## Supabase schema (ER sketch)
 
@@ -205,9 +208,9 @@ See [docs/adr-002-people-search-budget.md](docs/adr-002-people-search-budget.md)
   upsell signal for the account manager (P2).
 - `icp_fit_decisions.csv` — full fit-check audit trail (every keep/drop + rationale).
 
-_The committed copies are from a real live run (`mode: "live"`) against free-tier
-accounts — Apify scrape + `perplexity/sonar` web fit-check + Prospeo people-search
-+ Supabase. A reviewer's run overwrites them._
+_The committed copies come from a real live run (`mode: "live"`) against free-tier
+accounts: Apify scrape, the `perplexity/sonar` web fit-check, Prospeo people-search,
+and Supabase persistence. A reviewer's own run overwrites them._
 
 ## Testing
 
@@ -243,9 +246,9 @@ blank Supabase project. Integration details verified against the live APIs:
 - **P0 (all done):** Apify scrape with ICP keywords + locations + 7-day window →
   `jobs`; active-client exclusion *before* fit-check; web-research ICP fit-check →
   `companies` + rationale; Prospeo `people_search` capped at 2, logging the provider
-  + scope per contact; mandatory LLM hiring-manager validation with a logged reason
-  for every drop; validated contacts → `contacts` linked to company + job(s); schema
-  created from code; README for a fresh clone.
+  and scope on every contact; mandatory LLM hiring-manager validation with a logged
+  reason for every drop; validated contacts → `contacts` linked to company + job(s);
+  schema created from code; README for a fresh clone.
 - **P1 (all done):** idempotent reruns (no dup rows, no re-spent credits); contact
   dedup with the N:M job join; structured logs + `run_summary.json`; schema
   bootstraps a blank Supabase.
