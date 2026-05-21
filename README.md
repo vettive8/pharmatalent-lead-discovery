@@ -8,6 +8,11 @@ Supabase — `jobs`, `companies`, `contacts` — ready for downstream outreach.
 
 > _Take-home for the delivery-engineer interview. Self-reported time: **~7 focused
 > hours**, AI-assisted with Claude Code (see [AI-assisted workflow](#ai-assisted-workflow))._
+>
+> _People-search uses **Prospeo** (AI Ark requires a business-email account, which I
+> didn't have for this project). It was run end-to-end on free-tier accounts; the
+> only paid item was a **$5 OpenRouter top-up** (sanctioned by `TOOLS.md`), of which
+> the live runs used ~$0.23._
 
 ---
 
@@ -19,9 +24,9 @@ stores every job in Supabase; **(3)** excludes active clients (fuzzy/slug/name
 matching) and drops recruitment agencies, deduping the rest into companies;
 **(4)** ICP fit-checks each company with a **web-browsing LLM that reads the real
 company website**; **(5)** stores qualifying companies with the fit rationale;
-**(6)** maps a decision-maker at each via the **AI Ark `people_search` API**
-(Prospeo fallback), capped at 2 results/call with a geographic cascade and a
-credit guard; **(7)** validates each candidate with a cheaper LLM ("could this
+**(6)** maps a decision-maker at each via the **Prospeo `people_search` API**,
+capped at 2 results/call with a credit guard so reruns never re-spend; **(7)**
+validates each candidate with a cheaper LLM ("could this
 person plausibly own this requisition?"); **(8)** stores validated contacts linked
 back to their company and the surfacing job(s); and **(9)** writes structured logs
 plus `output/run_summary.json`. Reruns are idempotent and never re-spend credits.
@@ -38,7 +43,7 @@ plus `output/run_summary.json`. Reruns are idempotent and never re-spend credits
  ICP fit-check (web-research LLM) ─▶ companies (Supabase) + icp_fit_decisions.csv
       │  (fit only)
       ▼
- DMM people_search (AI Ark ▶ Prospeo, cascade, cap 2, credit guard)
+ DMM people-search (Prospeo, cap 2, credit guard)
       │
       ▼
  LLM hiring-manager validation ─▶ contacts (Supabase) ──< contact_jobs >── jobs
@@ -61,7 +66,7 @@ pipeline/
     http.py          shared bounded-retry policy (429/5xx backoff)
     apify.py         fantastic.jobs actor (+ fixture fallback)
     openrouter.py    web fit-check + cheap validation (prompts + JSON parsing)
-    people_search.py AI Ark primary + Prospeo fallback (+ fixture synth)
+    people_search.py Prospeo people-search (+ optional AI Ark, fixture synth)
     store.py         data layer: PostgresStore + InMemoryStore dry-run double
   stages/            scrape, exclude, fitcheck, dmm, validate
   outputs.py         the two CSVs + run_summary.json
@@ -159,15 +164,31 @@ Full rationale and alternatives in [docs/adr-001-supabase-schema.md](docs/adr-00
 Both are overridable via env. Rationale follows TOOLS.md §3: spend the budget on
 the web model, keep validation cheap.
 
+## People-search provider
+
+This pipeline uses **Prospeo** for the decision-maker mapping step (`POST
+/search-person`, `X-KEY` auth). AI Ark is the brief's default, but it requires a
+business-email account I didn't have for this project, so **Prospeo is what runs
+here** and what the verification used.
+
+AI Ark support is still included as an **optional drop-in**: set `AI_ARK_TOKEN` and
+it becomes the primary provider (built to AI Ark's documented `/v1/people` API)
+with Prospeo as the fallback. It is wired but not exercised in this submission. The
+P2 `mcp.json` is provided so a reviewer can connect their own AI Ark account to
+Claude Code / Cursor for ad-hoc exploration. Because Prospeo matches by company
+name (it is location-agnostic), a Prospeo run does one company-scoped search per
+company rather than AI Ark's geographic city→country→region→worldwide cascade —
+see [docs/adr-002-people-search-budget.md](docs/adr-002-people-search-budget.md).
+
 ## Operational behavior
 
 - **Idempotent reruns.** Every write is `INSERT … ON CONFLICT` on a natural key.
   A second run produces no duplicate rows and (verified in tests) spends **0**
   people-search credits — already-resolved `(company, title)` pairs are skipped
   via `dmm_queries`. See [docs/adr-002-people-search-budget.md](docs/adr-002-people-search-budget.md).
-- **Budget discipline.** People-search is capped at 2 results/call, stops on the
-  first cascade hit, and never re-queries a resolved company — designed for AI
-  Ark's 100-credit ceiling.
+- **Budget discipline.** People-search is capped at 2 results/call and never
+  re-queries a resolved company — a discipline designed for the tightest free tier
+  (AI Ark's 100-credit ceiling) and applied to Prospeo too.
 - **Resilience.** Provider calls use bounded exponential backoff on 429/5xx
   (never infinite). A failed fit-check or validation call degrades to the offline
   heuristic for that one item instead of aborting the run. Config errors fail fast

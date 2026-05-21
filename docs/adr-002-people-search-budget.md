@@ -13,17 +13,19 @@ without exhausting credits, and that survives reruns.
 
 ## Decision
 
-**Provider routing: AI Ark primary, Prospeo fallback.** Each `(company, cascade
-level)` is searched on AI Ark first; if it returns nothing, Prospeo is tried (when
-configured). The provider that produced each hit is logged and stored on the
-contact (`provider`), so the routing is auditable. Either provider can run alone
-via env (drop the other's key).
+**Provider: Prospeo (used here); AI Ark optional.** This submission runs on
+Prospeo — AI Ark requires a business-email account I didn't have. AI Ark remains
+wired as an optional drop-in: if `AI_ARK_TOKEN` is set it is tried first (built to
+AI Ark's documented `/v1/people` API) and Prospeo is the fallback. The provider
+that produced each hit is logged and stored on the contact (`provider`), so the
+routing is auditable. Either provider can run alone via env.
 
-**One capped call per cascade level, stop on first hit.** For each company we take
-the size-band target titles (DMM.md) and walk the geographic cascade
-city → country → EU region → worldwide, making **one** people-search call per
-level that passes the *whole* band title list, capped at **2 results**. We stop at
-the first level that returns anyone.
+**Cascade depends on the provider.** AI Ark takes a `location`, so it walks the
+DMM.md geographic cascade (city → country → EU region → worldwide), one capped call
+per level, stopping at the first hit. **Prospeo matches by company name and ignores
+location**, so a Prospeo run does a single company-scoped search instead of
+re-querying the same company per geo level (the recorded `cascade_level` is
+`company`). Both cap at **2 results** and pass the band's target titles.
 
 > **Reinterpretation flagged:** DMM.md phrases stop-on-first-hit "per (company,
 > target title)". Passing the full band title list in a single call (rather than
@@ -46,8 +48,10 @@ chasing a worldwide match that wouldn't own a local requisition.
 
 - *One call per (company, title)* — literal reading of DMM.md. Up to 5× the calls
   per company; unjustifiable against a 100-credit cap.
-- *Prospeo only* — simplest and safest on budget, but loses the AI Ark MCP bonus
-  and the "primary/fallback" pattern the brief calls clean. We wired both.
+- *AI Ark as the live provider* — the brief's default, but it needs a
+  business-email account I didn't have. We use Prospeo and keep AI Ark as an
+  optional drop-in plus the `mcp.json` bonus, so a reviewer with an AI Ark key
+  still gets the "primary/fallback" pattern.
 - *Higher result cap* — every returned person costs an LLM validation call too, so
   2 is the right ceiling regardless of provider (per TOOLS.md §2b).
 

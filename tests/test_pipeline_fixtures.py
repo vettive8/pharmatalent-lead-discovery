@@ -10,16 +10,18 @@ from pipeline.run import run_pipeline
 setup_logging("WARNING")
 
 
-def _settings():
+def _settings(output_dir):
     # Force a fully hermetic run: offline LLM + no providers, regardless of any
-    # local .env. The test must never touch the network or spend credits.
+    # local .env. Write artifacts to a temp dir so the test never clobbers the
+    # committed output/ deliverables. Never touches the network or spends credits.
     s = load_settings(use_fixtures=True, no_db=True)
     return dataclasses.replace(s, openrouter_api_key=None, ai_ark_token=None,
-                               prospeo_api_key=None, supabase_db_url=None)
+                               prospeo_api_key=None, supabase_db_url=None,
+                               output_dir=output_dir)
 
 
-def test_end_to_end_counts():
-    summary = run_pipeline(_settings(), store=InMemoryStore())
+def test_end_to_end_counts(tmp_path):
+    summary = run_pipeline(_settings(tmp_path), store=InMemoryStore())
     stages = summary["stages"]
     assert stages["scrape"]["jobs_scraped"] == 22
     # 7 active-client jobs excluded, 1 agency dropped -> 14 companies evaluated.
@@ -35,9 +37,9 @@ def test_end_to_end_counts():
     assert summary["database_totals"]["contacts"] == 13
 
 
-def test_reruns_are_idempotent_and_do_not_respend_credits():
+def test_reruns_are_idempotent_and_do_not_respend_credits(tmp_path):
     store = InMemoryStore()
-    settings = _settings()
+    settings = _settings(tmp_path)
 
     first = run_pipeline(settings, store=store)
     second = run_pipeline(settings, store=store)
@@ -52,7 +54,7 @@ def test_reruns_are_idempotent_and_do_not_respend_credits():
     assert second["stages"]["validate"]["validations_run"] == 0
 
 
-def test_active_client_rows_have_required_columns():
-    summary = run_pipeline(_settings(), store=InMemoryStore())
+def test_active_client_rows_have_required_columns(tmp_path):
+    summary = run_pipeline(_settings(tmp_path), store=InMemoryStore())
     # The CSV is written; just assert the schema-critical count here.
     assert summary["stages"]["exclude"]["active_client_job_rows"] == 7

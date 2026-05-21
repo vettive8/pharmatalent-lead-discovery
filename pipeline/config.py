@@ -46,12 +46,12 @@ class Settings:
     apify_token: str | None = None
     apify_actor_id: str = "vIGxjRrHqDTPuE6M4"
 
-    # --- AI Ark (primary people-search) ------------------------------------
+    # --- Prospeo (people-search — the provider used here) ------------------
+    prospeo_api_key: str | None = None
+
+    # --- AI Ark (OPTIONAL people-search; primary when its token is set) -----
     ai_ark_token: str | None = None
     ai_ark_base_url: str = "https://api.ai-ark.com"
-
-    # --- Prospeo (fallback people-search) ----------------------------------
-    prospeo_api_key: str | None = None
 
     # --- OpenRouter ---------------------------------------------------------
     openrouter_api_key: str | None = None

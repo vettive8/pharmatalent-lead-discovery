@@ -1,15 +1,16 @@
-"""People-search client for the DMM step — AI Ark primary, Prospeo fallback.
+"""People-search client for the DMM step.
+
+This pipeline uses **Prospeo** (verified against the live `/search-person` API).
+**AI Ark** is an optional drop-in: if ``AI_ARK_TOKEN`` is set it is tried first
+(built to AI Ark's documented `/v1/people` API) with Prospeo as the fallback;
+it is not exercised in this submission because it requires a business-email
+account. See the README "People-search provider" section.
 
 Budget discipline (DMM.md / TOOLS.md): every call is capped at ``limit`` (max 2)
 results. The cascade, stop-on-first-hit, and (company, title) credit guard live in
-the DMM stage; this client just performs one capped search at one cascade level
-and reports which provider produced the hit.
-
-NOTE (live verification): the exact AI Ark / Prospeo request paths and field names
-are confirmed against each provider's live API + docs when real credentials are
-first supplied (see README "Live-run verification"). Base URLs and paths are
-env-overridable so a correction is configuration, not a code change. The fixture
-path below fully exercises the cascade/cap/dedup logic with zero credits.
+the DMM stage; this client performs one capped search and reports which provider
+produced the hit. Request paths/base URLs are env-overridable. The fixture path
+below exercises the cap/dedup logic with zero credits.
 """
 
 from __future__ import annotations
@@ -53,9 +54,9 @@ class PeopleSearchClient:
         limit = min(limit, 2)  # hard ceiling regardless of caller (DMM.md)
 
         if self.settings.use_fixtures:
-            return self._fixture_candidates(company_name, company_domain, titles, location, limit), "ai_ark"
+            return self._fixture_candidates(company_name, company_domain, titles, location, limit), "prospeo"
 
-        # Live: AI Ark first.
+        # Live: AI Ark first only if its (optional) token is set; otherwise Prospeo.
         if self.settings.ai_ark_token:
             cands = self._ai_ark(company_name, company_domain, titles, location, limit)
             if cands:
@@ -139,7 +140,7 @@ class PeopleSearchClient:
             linkedin_url=f"https://www.linkedin.com/in/{slug}/",
             location=location,
             about_snippet="(synthetic fixture candidate — no real PII)",
-            provider="ai_ark",
+            provider="prospeo",
             company_domain=company_domain,
         )
         return [cand][:limit]
