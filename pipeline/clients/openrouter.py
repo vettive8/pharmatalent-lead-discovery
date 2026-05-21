@@ -44,6 +44,11 @@ ICP — a company is a FIT only if ALL hold:
   pharma, a CRO, or a CDMO that runs clinical trials in-house.
 - It has at least one operational/hiring location in the EU/EEA/UK/Switzerland/Norway
   (HQ may be anywhere — a US/Asian biotech with a European office is in scope).
+- Company size is 50–2000 employees GLOBALLY. The headcount you are given may be a
+  single local/subsidiary entity; if the company is a division, affiliate, or
+  subsidiary of a parent/group whose GLOBAL headcount exceeds ~2000 (e.g. a Big
+  Pharma local affiliate such as an "MSD"/Merck, Pfizer, Novartis, Roche country
+  office), mark it not_fit even though the local entity looks small.
 
 Disqualify (decision = not_fit) if ANY apply: pure academia/universities/research
 institutes; hospitals/clinics; generic-drug-only makers under 50 staff; fully
@@ -126,7 +131,8 @@ def _build_fitcheck_user(company: Company) -> str:
     return (
         f"Company: {company.name}\n"
         f"LinkedIn industry: {company.industry or 'unknown'}\n"
-        f"Employees (LinkedIn): {company.employees or 'unknown'}\n"
+        f"Employees (LinkedIn, may be a LOCAL/subsidiary entity not the global group): "
+        f"{company.employees or 'unknown'}\n"
         f"Headquarters: {company.headquarters or 'unknown'}\n"
         f"Specialties: {', '.join(company.specialties) or 'unknown'}\n"
         f"LinkedIn description: {company.description or 'n/a'}\n"
