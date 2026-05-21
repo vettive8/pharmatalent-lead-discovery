@@ -6,8 +6,8 @@ against the client ICP (with a real website-research pass), maps the right
 decision-maker, validates that person with an LLM, and lands everything in
 Supabase — `jobs`, `companies`, `contacts` — ready for downstream outreach.
 
-> _Take-home for the delivery-engineer interview. Self-reported time: **~7 focused
-> hours**, AI-assisted with Claude Code (see [AI-assisted workflow](#ai-assisted-workflow))._
+> _Take-home for the delivery-engineer interview, AI-assisted with Claude Code
+> (see [AI-assisted workflow](#ai-assisted-workflow))._
 >
 > _People-search uses **Prospeo** (see [People-search provider](#people-search-provider)
 > for why, not the brief's default AI Ark). Run end-to-end on free-tier accounts; the
@@ -208,9 +208,11 @@ See [docs/adr-002-people-search-budget.md](docs/adr-002-people-search-budget.md)
   upsell signal for the account manager (P2).
 - `icp_fit_decisions.csv` — full fit-check audit trail (every keep/drop + rationale).
 
-_The committed copies come from a real live run (`mode: "live"`) against free-tier
-accounts: Apify scrape, the `perplexity/sonar` web fit-check, Prospeo people-search,
-and Supabase persistence. A reviewer's own run overwrites them._
+_The committed copies are from a representative **first** live run (`mode: "live"`):
+real Apify scrape, `perplexity/sonar` web fit-check, Prospeo people-search, and LLM
+hiring-manager validation — so the DMM/validate stages show real work (hits,
+validations, contacts created), not the all-zeros of an idempotent rerun. A
+reviewer's own run overwrites them and persists to their Supabase._
 
 ## Testing
 
@@ -283,10 +285,11 @@ blank Supabase project. Integration details verified against the live APIs:
 
 ## AI-assisted workflow
 
-Built with **Claude Code**. The work landed through a series of merged Claude Code
-pull requests (core pipeline → live API hardening → provider transparency → ICP
-size-rule fix) — visible in the repo's PR history, per the brief's requirement that
-at least one merged PR be opened via Claude Code or Codex.
+Built with **Claude Code**. The work landed through **seven merged Claude Code
+pull requests** (core pipeline → live-API hardening → provider transparency → ICP
+size-rule fix → Prospeo-only refactor → Supabase pooler fix → fit-check caching),
+visible in the repo's PR history — per the brief's requirement that at least one
+merged PR be opened via Claude Code or Codex.
 
 ## License
 
