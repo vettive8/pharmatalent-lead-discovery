@@ -44,9 +44,17 @@ class DMMResult:
     credits_spent: int = 0
 
 
-def _cascade_levels(company: Company, band_label: str) -> list[tuple[str, str]]:
-    """(cascade_level, location) pairs in priority order for this company."""
+def _cascade_levels(company: Company, band_label: str, geo_cascade: bool) -> list[tuple[str, str]]:
+    """(cascade_level, location) pairs in priority order for this company.
+
+    AI Ark takes a location, so it walks a true geographic cascade. Prospeo matches
+    by company name and ignores location, so a Prospeo-only run does a single
+    company-scoped search instead of re-querying the same company per geo level.
+    """
     country = company.countries[0] if company.countries else None
+    if not geo_cascade:
+        return [("company", country or "worldwide")]
+
     city = company.cities[0] if company.cities else None
     levels: list[tuple[str, str]] = []
     if city:
@@ -65,6 +73,8 @@ def _cascade_levels(company: Company, band_label: str) -> list[tuple[str, str]]:
 def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> DMMResult:
     client = PeopleSearchClient(settings)
     result = DMMResult()
+    # AI Ark uses a geographic cascade; a Prospeo-only run searches by company.
+    geo_cascade = bool(settings.ai_ark_token)
 
     for company in fit_companies:
         band = icp.size_band_for(company.employees)
@@ -83,7 +93,7 @@ def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> D
                      "company": company.name, "prior_outcome": seen["outcome"]})
             continue
 
-        hit = _search_cascade(client, company, titles, band_label)
+        hit = _search_cascade(client, company, titles, band_label, geo_cascade)
         if hit is None:
             store.record_dmm_query(company.id, primary_title, None, None, 0, "no_candidate")
             result.no_candidate.append(company.name)
@@ -106,8 +116,8 @@ def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> D
 
 
 def _search_cascade(client: PeopleSearchClient, company: Company, titles: list[str],
-                    band_label: str) -> tuple[list[PersonCandidate], str, str] | None:
-    for cascade_level, location in _cascade_levels(company, band_label):
+                    band_label: str, geo_cascade: bool) -> tuple[list[PersonCandidate], str, str] | None:
+    for cascade_level, location in _cascade_levels(company, band_label, geo_cascade):
         candidates, provider = client.search(
             company_name=company.name, company_domain=company.domain, titles=titles,
             location=location, cascade_level=cascade_level, limit=2,

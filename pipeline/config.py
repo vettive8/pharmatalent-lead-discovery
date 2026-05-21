@@ -48,7 +48,7 @@ class Settings:
 
     # --- AI Ark (primary people-search) ------------------------------------
     ai_ark_token: str | None = None
-    ai_ark_base_url: str = "https://api.aiark.com"
+    ai_ark_base_url: str = "https://api.ai-ark.com"
 
     # --- Prospeo (fallback people-search) ----------------------------------
     prospeo_api_key: str | None = None
@@ -97,7 +97,7 @@ def load_settings(*, use_fixtures: bool = False, no_db: bool = False) -> Setting
         apify_token=os.getenv("APIFY_TOKEN") or None,
         apify_actor_id=os.getenv("APIFY_ACTOR_ID", "vIGxjRrHqDTPuE6M4"),
         ai_ark_token=os.getenv("AI_ARK_TOKEN") or None,
-        ai_ark_base_url=os.getenv("AI_ARK_BASE_URL", "https://api.aiark.com"),
+        ai_ark_base_url=os.getenv("AI_ARK_BASE_URL", "https://api.ai-ark.com"),
         prospeo_api_key=os.getenv("PROSPEO_API_KEY") or None,
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY") or None,
         fitcheck_model=os.getenv("OPENROUTER_FITCHECK_MODEL", "perplexity/sonar"),

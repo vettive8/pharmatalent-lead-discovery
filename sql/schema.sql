@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     location              TEXT,
     about_snippet         TEXT,
     provider              TEXT CHECK (provider IN ('ai_ark', 'prospeo')),
-    cascade_level         TEXT CHECK (cascade_level IN ('city', 'country', 'region', 'worldwide')),
+    cascade_level         TEXT CHECK (cascade_level IN ('city', 'country', 'region', 'worldwide', 'company')),
     target_title          TEXT,                     -- DMM target title that surfaced them
     validation_decision   TEXT CHECK (validation_decision IN ('yes', 'no')),
     validation_reason     TEXT,

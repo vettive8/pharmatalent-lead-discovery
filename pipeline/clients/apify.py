@@ -17,9 +17,9 @@ from .http import with_retry
 
 log = get_logger("apify")
 
-# The fantastic.jobs actor exposes a recency filter. Its exact key is confirmed
-# against the live Input schema at run time; override via env if your build
-# differs. Documented in the README's "live-run verification" note.
+# Verified against the live actor Input schema (advanced-linkedin-job-search-api
+# by fantastic-jobs): the recency filter is `timeRange` (enum 1h/24h/7d/6m) and
+# the result cap is `limit` (integer, max 5000). Confirmed 2026-05-21.
 TIME_RANGE_PARAM = "timeRange"
 
 
@@ -36,7 +36,7 @@ def build_actor_input(settings: Settings) -> dict:
         "removeAgency": True,                            # drop staffing/recruiting
         "descriptionType": "text",                       # cheaper than html
         "includeAi": False,                              # AI enrichment is tech-only
-        "maxItems": settings.scrape_max_items,
+        "limit": settings.scrape_max_items,              # actor's result cap (max 5000)
     }
 
 
