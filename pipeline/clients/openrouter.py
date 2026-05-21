@@ -84,7 +84,7 @@ class OpenRouterClient:
         self._headers = {
             "Authorization": f"Bearer {settings.openrouter_api_key}",
             # Optional attribution headers OpenRouter recommends.
-            "HTTP-Referer": "https://github.com/vettive8/pharmatalent-lead-pipeline",
+            "HTTP-Referer": "https://github.com/vettive8/pharmatalent-lead-discovery",
             "X-Title": "PharmaTalent Lead Pipeline",
         }
 

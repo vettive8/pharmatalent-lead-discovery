@@ -75,8 +75,8 @@ tests/               16 tests, no network/DB
 ## Quick start
 
 ```bash
-git clone https://github.com/vettive8/pharmatalent-lead-pipeline.git
-cd pharmatalent-lead-pipeline
+git clone https://github.com/vettive8/pharmatalent-lead-discovery.git
+cd pharmatalent-lead-discovery
 
 python -m venv .venv
 # Windows:        .venv\Scripts\activate

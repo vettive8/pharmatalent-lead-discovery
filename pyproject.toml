@@ -1,5 +1,5 @@
 [project]
-name = "pharmatalent-lead-pipeline"
+name = "pharmatalent-lead-discovery"
 version = "0.1.0"
 description = "Weekly biotech/pharma lead-discovery pipeline for PharmaTalent Europe"
 readme = "README.md"
