@@ -42,6 +42,12 @@ class Store(ABC):
         """Upsert a company by linkedin_slug; return its id."""
 
     @abstractmethod
+    def company_decision(self, linkedin_slug: str) -> dict | None:
+        """Return a company's stored fit-check decision (id, decision, rationale,
+        confidence, fit_score, size_band, domain) if it was already checked, else
+        None — the fit-check cache that stops reruns re-spending OpenRouter."""
+
+    @abstractmethod
     def dmm_query_seen(self, company_id: str, target_title: str) -> dict | None:
         """Return a prior (company, title) people-search record, or None."""
 
@@ -153,6 +159,19 @@ class PostgresStore(Store):
                  company.checked_at),
             )
             return str(cur.fetchone()[0])
+
+    def company_decision(self, linkedin_slug: str) -> dict | None:
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, decision, rationale, confidence, fit_score, size_band, domain, checked_at "
+                "FROM companies WHERE linkedin_slug = %s",
+                (linkedin_slug,),
+            )
+            row = cur.fetchone()
+        if not row or row[7] is None:        # no checked_at => not yet fit-checked
+            return None
+        return {"id": str(row[0]), "decision": row[1], "rationale": row[2], "confidence": row[3],
+                "fit_score": row[4], "size_band": row[5], "domain": row[6], "checked_at": row[7]}
 
     def dmm_query_seen(self, company_id: str, target_title: str) -> dict | None:
         with self.conn.cursor() as cur:
@@ -268,8 +287,15 @@ class InMemoryStore(Store):
             "rationale": company.rationale, "confidence": company.confidence,
             "fit_score": company.fit_score, "size_band": company.size_band,
             "domain": company.domain, "employees": company.employees,
+            "checked_at": company.checked_at,
         }
         return cid
+
+    def company_decision(self, linkedin_slug: str) -> dict | None:
+        row = self.companies.get(linkedin_slug)
+        if not row or not row.get("checked_at"):
+            return None
+        return row
 
     def dmm_query_seen(self, company_id, target_title) -> dict | None:
         return self.dmm.get((company_id, target_title))

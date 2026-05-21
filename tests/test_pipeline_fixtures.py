@@ -51,6 +51,9 @@ def test_reruns_are_idempotent_and_do_not_respend_credits(tmp_path):
     assert second["stages"]["dmm"]["people_search_credits_spent"] == 0
     assert second["stages"]["dmm"]["skipped_already_queried"] == 13
     assert second["stages"]["validate"]["validations_run"] == 0
+    # ...and ZERO fit-check (web-model) calls: all 14 companies reuse the cache.
+    assert first["stages"]["fit_check"]["cached"] == 0
+    assert second["stages"]["fit_check"]["cached"] == 14
 
 
 def test_active_client_rows_have_required_columns(tmp_path):

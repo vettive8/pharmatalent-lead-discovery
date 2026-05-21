@@ -72,6 +72,7 @@ def run_pipeline(settings: Settings, store: Store | None = None) -> dict:
                 "fit_check": {
                     "fit": len(fit.fit_companies),
                     "not_fit": len(fit.decision_rows) - len(fit.fit_companies),
+                    "cached": fit.cached,
                 },
                 "dmm": {
                     "hits": len(dmm.hits),
