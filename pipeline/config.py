@@ -1,6 +1,6 @@
 """Runtime configuration — every account-specific value comes from the env.
 
-Nothing here is hardcoded to a particular Apify / AI Ark / Supabase / OpenRouter
+Nothing here is hardcoded to a particular Apify / Prospeo / Supabase / OpenRouter
 account. Swapping ``.env`` is sufficient to retarget the whole pipeline, which is
 exactly how the reviewers rerun it.
 """
@@ -46,12 +46,8 @@ class Settings:
     apify_token: str | None = None
     apify_actor_id: str = "vIGxjRrHqDTPuE6M4"
 
-    # --- Prospeo (people-search — the provider used here) ------------------
+    # --- Prospeo (people-search provider for the DMM step) ------------------
     prospeo_api_key: str | None = None
-
-    # --- AI Ark (OPTIONAL people-search; primary when its token is set) -----
-    ai_ark_token: str | None = None
-    ai_ark_base_url: str = "https://api.ai-ark.com"
 
     # --- OpenRouter ---------------------------------------------------------
     openrouter_api_key: str | None = None
@@ -72,13 +68,14 @@ class Settings:
     schema_path: Path = SQL_DIR / "schema.sql"
 
     @property
-    def prospeo_enabled(self) -> bool:
-        return bool(self.prospeo_api_key)
-
-    @property
     def llm_offline(self) -> bool:
-        """True when LLM stages must fall back to the offline heuristic."""
-        return not self.openrouter_api_key
+        """True when LLM stages use the offline heuristic instead of OpenRouter.
+
+        Fixture runs are always offline so ``--fixtures`` is a deterministic,
+        zero-credit sandbox regardless of whether a key is set; live runs use the
+        real models. (A live run is the way to exercise the real prompts.)
+        """
+        return self.use_fixtures or not self.openrouter_api_key
 
 
 def load_settings(*, use_fixtures: bool = False, no_db: bool = False) -> Settings:
@@ -96,8 +93,6 @@ def load_settings(*, use_fixtures: bool = False, no_db: bool = False) -> Setting
         no_db=no_db,
         apify_token=os.getenv("APIFY_TOKEN") or None,
         apify_actor_id=os.getenv("APIFY_ACTOR_ID", "vIGxjRrHqDTPuE6M4"),
-        ai_ark_token=os.getenv("AI_ARK_TOKEN") or None,
-        ai_ark_base_url=os.getenv("AI_ARK_BASE_URL", "https://api.ai-ark.com"),
         prospeo_api_key=os.getenv("PROSPEO_API_KEY") or None,
         openrouter_api_key=os.getenv("OPENROUTER_API_KEY") or None,
         fitcheck_model=os.getenv("OPENROUTER_FITCHECK_MODEL", "perplexity/sonar"),
@@ -125,8 +120,8 @@ def require_live_credentials(settings: Settings) -> None:
             missing.append("APIFY_TOKEN")
         if not settings.openrouter_api_key:
             missing.append("OPENROUTER_API_KEY")
-        if not settings.ai_ark_token and not settings.prospeo_api_key:
-            missing.append("AI_ARK_TOKEN or PROSPEO_API_KEY")
+        if not settings.prospeo_api_key:
+            missing.append("PROSPEO_API_KEY")
     if not settings.no_db and not settings.supabase_db_url:
         missing.append("SUPABASE_DB_URL (or pass --no-db for a dry run)")
     if missing:

@@ -163,23 +163,8 @@ class PersonCandidate:
     linkedin_url: str | None
     location: str | None = None
     about_snippet: str | None = None
-    provider: str = "ai_ark"          # 'ai_ark' | 'prospeo'
+    provider: str = "prospeo"
     company_domain: str | None = None
-
-    @classmethod
-    def from_result(cls, row: dict, provider: str) -> "PersonCandidate":
-        name = row.get("full_name") or " ".join(
-            x for x in (row.get("first_name"), row.get("last_name")) if x
-        )
-        return cls(
-            full_name=name or "",
-            title=row.get("title"),
-            linkedin_url=row.get("linkedin_url"),
-            location=row.get("location"),
-            about_snippet=row.get("about_snippet") or row.get("about") or "",
-            provider=provider,
-            company_domain=row.get("company_domain"),
-        )
 
     def dedup_key(self, company_domain: str | None) -> str:
         canon = canonicalize_linkedin_url(self.linkedin_url)
