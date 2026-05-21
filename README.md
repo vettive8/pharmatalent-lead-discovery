@@ -12,7 +12,7 @@ Supabase — `jobs`, `companies`, `contacts` — ready for downstream outreach.
 > _People-search uses **Prospeo** (see [People-search provider](#people-search-provider)
 > for why, not the brief's default AI Ark). Run end-to-end on free-tier accounts; the
 > only paid item was a **$5 OpenRouter top-up** (sanctioned by `TOOLS.md`), of which
-> the live runs used ~$0.23._
+> all the development + live runs used **~$0.63 total**._
 
 ---
 
@@ -285,11 +285,12 @@ blank Supabase project. Integration details verified against the live APIs:
 
 ## AI-assisted workflow
 
-Built with **Claude Code**. The work landed through **seven merged Claude Code
-pull requests** (core pipeline → live-API hardening → provider transparency → ICP
-size-rule fix → Prospeo-only refactor → Supabase pooler fix → fit-check caching),
-visible in the repo's PR history — per the brief's requirement that at least one
-merged PR be opened via Claude Code or Codex.
+Built with **Claude Code**. Every change landed through a merged Claude Code pull
+request — the full series (core pipeline → live-API hardening → provider
+transparency → ICP size-rule fix → Prospeo-only refactor → Supabase pooler fix →
+fit-check caching → docs/artifact polish) is in the repo's **Pull requests** tab.
+This satisfies the brief's requirement that at least one merged PR be opened via
+Claude Code or Codex.
 
 ## License
 
