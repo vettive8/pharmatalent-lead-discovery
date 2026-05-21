@@ -1,0 +1,8 @@
+client_name,matched_company_name_raw,scraped_job_title,scraped_job_url,location,posted_at,detected_at
+biontech,BioNTech SE,Regulatory Affairs Manager EU,https://www.linkedin.com/jobs/view/3925889204,"Mainz, Rhineland-Palatinate, Germany",2026-05-14T10:00:00+00:00,2026-05-21T13:08:58.932132+00:00
+evotec,Evotec SE,Pharmacovigilance Manager,https://www.linkedin.com/jobs/view/3926771033,"Hamburg, Hamburg, Germany",2026-05-11T09:00:00+00:00,2026-05-21T13:08:58.932132+00:00
+pfizer,Pfizer,Senior Clinical Research Associate,https://www.linkedin.com/jobs/view/3926009876,"Berlin, Berlin, Germany",2026-05-14T13:00:00+00:00,2026-05-21T13:08:58.932132+00:00
+roche,Roche Diagnostics GmbH,Regulatory Affairs Manager,https://www.linkedin.com/jobs/view/3926221107,"Mannheim, Baden-Württemberg, Germany",2026-05-15T12:00:00+00:00,2026-05-21T13:08:58.932132+00:00
+icon,ICON plc,Clinical Research Associate II,https://www.linkedin.com/jobs/view/3926009955,"Dublin, County Dublin, Ireland",2026-05-14T08:00:00+00:00,2026-05-21T13:08:58.932132+00:00
+morphosys,MorphoSys AG,Regulatory Affairs Manager,https://www.linkedin.com/jobs/view/3925330011,"Planegg, Bavaria, Germany",2026-05-15T08:00:00+00:00,2026-05-21T13:08:58.932132+00:00
+bayer,Bayer AG,Clinical Trial Manager,https://www.linkedin.com/jobs/view/3927009912,"Berlin, Berlin, Germany",2026-05-14T11:00:00+00:00,2026-05-21T13:08:58.932132+00:00
