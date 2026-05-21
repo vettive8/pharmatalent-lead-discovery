@@ -1,43 +1,43 @@
 {
   "version": "0.1.0",
   "mode": "live",
-  "started_at": "2026-05-21T16:03:49.028581+00:00",
-  "finished_at": "2026-05-21T16:04:02.950960+00:00",
-  "duration_seconds": 13.92,
+  "started_at": "2026-05-21T16:13:07.697446+00:00",
+  "finished_at": "2026-05-21T16:17:15.264536+00:00",
+  "duration_seconds": 247.58,
   "stages": {
     "scrape": {
-      "jobs_scraped": 109
+      "jobs_scraped": 108
     },
     "exclude": {
-      "companies_to_evaluate": 63,
-      "active_client_job_rows": 9,
+      "companies_to_evaluate": 64,
+      "active_client_job_rows": 8,
       "dropped_agencies": 0
     },
     "fit_check": {
       "fit": 10,
-      "not_fit": 53,
-      "cached": 62
+      "not_fit": 54,
+      "cached": 0
     },
     "dmm": {
-      "hits": 0,
+      "hits": 10,
       "no_candidate": 0,
-      "skipped_already_queried": 10,
-      "people_search_credits_spent": 0
+      "skipped_already_queried": 0,
+      "people_search_credits_spent": 20
     },
     "validate": {
-      "contacts_created": 0,
+      "contacts_created": 3,
       "contacts_existing": 0,
-      "dropped": 0,
-      "validations_run": 0,
-      "job_links": 0
+      "dropped": 17,
+      "validations_run": 22,
+      "job_links": 3
     }
   },
   "database_totals": {
-    "jobs": 109,
+    "jobs": 108,
     "companies_fit": 10,
-    "companies_not_fit": 53,
-    "contacts": 2,
-    "contact_job_links": 2
+    "companies_not_fit": 54,
+    "contacts": 3,
+    "contact_job_links": 3
   },
   "artifacts": {
     "active_client_hiring_csv": "output/active_client_hiring.csv",
