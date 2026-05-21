@@ -56,9 +56,10 @@ remote with no EU legal entity; staffing/recruitment/consulting agencies;
 medical-device firms with no drug-development arm; cosmetic/nutraceutical/food-
 supplement companies.
 
-Respond with STRICT JSON only, no prose around it:
+Respond with STRICT JSON only, no prose around it. Write the rationale in plain
+English (ASCII), 1-3 sentences:
 {"decision": "fit" | "not_fit",
- "rationale": "1-3 sentences that reference what you found on the company website",
+ "rationale": "1-3 sentences IN ENGLISH that reference what you found on the company website",
  "confidence": "high" | "medium" | "low",
  "fit_score": 0-100,
  "domain": "the company's primary website domain, e.g. example.com"}"""

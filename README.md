@@ -235,8 +235,10 @@ blank Supabase project. Integration details verified against the live APIs:
    `timeRange` (enum `1h/24h/7d/6m`), result cap is `limit` (max 5000).
 2. **Prospeo** — `POST https://api.prospeo.io/search-person` (`X-KEY` auth) with a
    `filters.company.names.include` query; returns 25/page (capped to 2 client-side),
-   ranked by seniority. `NO_RESULTS` and rate-limits arrive as HTTP 400 and are
-   handled (no-candidate / retry). Verified with live calls.
+   ranked by seniority. `NO_RESULTS` → no-candidate; rate-limits (observed as HTTP
+   400 live, documented as 429 `RATE_LIMITED`) → bounded retry. Billing is ~1 credit
+   per call, so the run summary reports `prospeo_search_calls` (≈ credits) separately
+   from `candidates_returned`. Verified with live calls.
 3. **OpenRouter** — the web model (`perplexity/sonar`) rejects
    `response_format=json_object`, so the fit-check requests plain text and parses
    the JSON out; validation (`deepseek/deepseek-chat`) uses JSON mode.
@@ -251,9 +253,12 @@ blank Supabase project. Integration details verified against the live APIs:
   and scope on every contact; mandatory LLM hiring-manager validation with a logged
   reason for every drop; validated contacts → `contacts` linked to company + job(s);
   schema created from code; README for a fresh clone.
-- **P1 (all done):** idempotent reruns (no dup rows, no re-spent credits); contact
-  dedup with the N:M job join; structured logs + `run_summary.json`; schema
-  bootstraps a blank Supabase.
+- **P1 (idempotency + observability done):** reruns produce **no duplicate rows** and
+  re-spend **no people-search or LLM credits** (the tight budgets — guarded by
+  `dmm_queries` + the fit-check cache); contact dedup with the N:M job join;
+  structured logs + `run_summary.json`; schema bootstraps a blank Supabase. *(One P1
+  sub-item is a deliberate scope choice — we re-call the Apify jobs index each run
+  rather than caching it; see cuts below.)*
 - **P2 (selected):** `active_client_hiring.csv`; LLM-scored fit (`fit_score`) +
   per-company rationale; bounded retries / rate-limit-aware client; ADRs in `docs/`.
   *(Not done: the AI Ark `mcp.json` bonus — we don't ship the untested AI Ark path;
@@ -261,6 +266,12 @@ blank Supabase project. Integration details verified against the live APIs:
 
 ### Cut for time / what I'd do with another day
 
+- **Scrape caching** — reruns re-call the Apify jobs index (it's an index, returns in
+  seconds, and the cheapest budget) and upsert, so there are no duplicate rows but the
+  call is repeated. TOOLS.md flags caching the scrape as a P1 nicety; I guarded the
+  *tight* budgets (people-search + OpenRouter) first. Next step: skip the Apify call
+  when `jobs` has rows scraped within the last N hours (the `raw` JSONB is stored, so
+  jobs can be rehydrated from the DB without re-scraping).
 - **Async/concurrent provider calls** — stages run sequentially; at this volume
   it's fast enough, but a `httpx.AsyncClient` + a small worker pool would cut live
   wall-time. The retry policy is already in place to build on.

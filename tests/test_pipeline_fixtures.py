@@ -30,9 +30,9 @@ def test_end_to_end_counts(tmp_path):
     # Genmab (2,500) is the only size drop.
     assert stages["fit_check"]["fit"] == 13
     assert stages["fit_check"]["not_fit"] == 1
-    # Every fit company yields exactly one decision-maker; budget = 1 credit each.
+    # Every fit company yields exactly one decision-maker; 1 Prospeo call each.
     assert stages["dmm"]["hits"] == 13
-    assert stages["dmm"]["people_search_credits_spent"] == 13
+    assert stages["dmm"]["prospeo_search_calls"] == 13
     assert summary["database_totals"]["contacts"] == 13
 
 
@@ -47,8 +47,8 @@ def test_reruns_are_idempotent_and_do_not_respend_credits(tmp_path):
     assert first["database_totals"] == second["database_totals"]
     assert second["database_totals"]["jobs"] == 22
     assert second["database_totals"]["contacts"] == 13
-    # Second pass spends ZERO people-search credits: every company is guard-skipped.
-    assert second["stages"]["dmm"]["people_search_credits_spent"] == 0
+    # Second pass makes ZERO Prospeo calls: every company is guard-skipped.
+    assert second["stages"]["dmm"]["prospeo_search_calls"] == 0
     assert second["stages"]["dmm"]["skipped_already_queried"] == 13
     assert second["stages"]["validate"]["validations_run"] == 0
     # ...and ZERO fit-check (web-model) calls: all 14 companies reuse the cache.

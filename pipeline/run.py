@@ -78,7 +78,8 @@ def run_pipeline(settings: Settings, store: Store | None = None) -> dict:
                     "hits": len(dmm.hits),
                     "no_candidate": len(dmm.no_candidate),
                     "skipped_already_queried": len(dmm.skipped_already_queried),
-                    "people_search_credits_spent": dmm.credits_spent,
+                    "prospeo_search_calls": dmm.search_calls,      # ~1 Prospeo credit each
+                    "candidates_returned": dmm.candidates_returned,
                 },
                 "validate": {
                     "contacts_created": val.contacts_created,

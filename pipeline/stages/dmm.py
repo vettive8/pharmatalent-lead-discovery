@@ -43,7 +43,8 @@ class DMMResult:
     hits: list[CompanyCandidates] = field(default_factory=list)
     no_candidate: list[str] = field(default_factory=list)
     skipped_already_queried: list[str] = field(default_factory=list)
-    credits_spent: int = 0
+    search_calls: int = 0          # Prospeo /search-person calls (~1 credit each)
+    candidates_returned: int = 0   # people kept across hits (<=2 per call)
 
 
 def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> DMMResult:
@@ -70,6 +71,8 @@ def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> D
         candidates, provider = client.search(
             company_name=company.name, company_domain=company.domain, titles=titles, limit=2,
         )
+        result.search_calls += 1   # one Prospeo call (~1 credit) per company searched
+
         if not candidates or not provider:
             store.record_dmm_query(company.id, primary_title, None, None, 0, "no_candidate")
             result.no_candidate.append(company.name)
@@ -78,7 +81,7 @@ def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> D
 
         store.record_dmm_query(company.id, primary_title, CASCADE_LEVEL, provider,
                                len(candidates), "hit")
-        result.credits_spent += len(candidates)
+        result.candidates_returned += len(candidates)
         result.hits.append(CompanyCandidates(company, candidates, CASCADE_LEVEL, provider, primary_title))
         log.info("dmm hit", extra={"event": "dmm.hit", "company": company.name,
                  "provider": provider, "candidates": len(candidates)})
@@ -86,5 +89,6 @@ def run_dmm(fit_companies: list[Company], settings: Settings, store: Store) -> D
     log.info("dmm complete", extra={"event": "dmm.done", "hits": len(result.hits),
              "no_candidate": len(result.no_candidate),
              "skipped": len(result.skipped_already_queried),
-             "credits_spent": result.credits_spent})
+             "prospeo_search_calls": result.search_calls,
+             "candidates_returned": result.candidates_returned})
     return result
