@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS dmm_queries (
     target_title  TEXT NOT NULL,
     cascade_level TEXT,                             -- level that hit, or last tried
     provider      TEXT,                             -- prospeo | none
-    result_count  INTEGER NOT NULL DEFAULT 0,       -- people returned (= credits spent)
+    result_count  INTEGER NOT NULL DEFAULT 0,       -- people returned by the call (Prospeo bills ~1 credit per call, not per person)
     outcome       TEXT NOT NULL CHECK (outcome IN ('hit', 'no_candidate')),
     queried_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (company_id, target_title)

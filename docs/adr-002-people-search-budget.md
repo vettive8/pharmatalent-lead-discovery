@@ -35,9 +35,11 @@ validation call too, so 2 is the right ceiling regardless of provider (TOOLS.md 
 **Credit guard via `dmm_queries`.** Before searching, we check whether the
 `(company, primary band title)` pair was already queried (see
 [ADR 001](adr-001-supabase-schema.md)). If so, the company is skipped entirely — no
-people-search call, no LLM validation. A rerun therefore spends **zero** new credits
-on already-resolved companies (proven by `test_pipeline_fixtures.py` and observed
-live: a rerun reported `skipped_already_queried` with 0 credits spent).
+people-search call, no LLM validation. A rerun therefore makes **zero** new Prospeo
+calls on already-resolved companies (proven by `test_pipeline_fixtures.py` and
+observed live: a rerun reported `skipped_already_queried` with `prospeo_search_calls`
+of 0). Prospeo bills ~1 credit per call (not per person), so the run summary reports
+`prospeo_search_calls` (≈ credits) and `candidates_returned` separately.
 
 ## Alternatives considered
 
@@ -54,7 +56,8 @@ live: a rerun reported `skipped_already_queried` with 0 credits spent).
 ## Consequences
 
 - ~1 people-search call per ICP-fit company (≈1 credit each) — comfortably within
-  Prospeo's free trial. The live full-ICP run resolved 10 fit companies for ~20 credits.
+  Prospeo's free trial. The live full-ICP run resolved 10 fit companies in ~10 calls
+  (≈10 credits), returning ~20 candidates (the 2-result cap × 10).
 - Ranking-then-cap means the 2 candidates we validate are the most senior matches,
   improving the hit rate of the (mandatory) LLM validation step.
 - Validation cost is bounded the same way (≤2 candidates/company); the in-run

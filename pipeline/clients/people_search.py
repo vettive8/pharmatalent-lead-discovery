@@ -66,12 +66,14 @@ class PeopleSearchClient:
             people = [_parse_prospeo_person(item) for item in data.get("results", [])]
             return _rank_by_seniority(people, titles)[:limit]
 
-        # Prospeo returns HTTP 400 for both no-results and rate-limits.
+        # Prospeo signals no-results and rate-limits via its error_code; the HTTP
+        # status has been observed as 400 (live) and is documented as 429.
         code = str(data.get("error_code", "")).lower()
         if "no_result" in code or "no result" in code:
             return []
-        if "rate limit" in code or resp.status_code == 429:
-            raise RetryableProviderError(f"prospeo rate limited: {code}")
+        # Match "rate limit", "rate_limited", "RATE_LIMITED", etc., plus HTTP 429.
+        if ("rate" in code and "limit" in code) or resp.status_code == 429:
+            raise RetryableProviderError(f"prospeo rate limited: {code or resp.status_code}")
         resp.raise_for_status()
         raise RuntimeError(f"prospeo error: {resp.status_code} {data.get('error_code')}")
 
